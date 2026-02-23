@@ -135,6 +135,7 @@ class multiheadattention(nn.Module):
 
         qkv = self.qkv_proj(x)
 
+                                                #este se hizo mas grande y si se armo
         qkv = qkv.reshape(batch, seq, 3, self.num_heads, self.d_head)
 
         qkv = qkv.permute(2,0,3,1,4)
@@ -169,8 +170,9 @@ class multiheadattention(nn.Module):
 
         return o, attn_weights
 
-a = multiheadattention(d_model=768, num_heads=12, dropout=0.1)
+a = multiheadattention(d_model=768, num_heads=6, dropout=0.1)
 
+#aqui estan los numheads
 embeddings_test = torch.randn(2,6,768)
 mask = create_causal_mask(6)
 
@@ -178,3 +180,4 @@ o, a = a(embeddings_test, mask)
 
 print(embeddings_test.shape)
 print(o.shape)
+print(a.shape)
