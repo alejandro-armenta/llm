@@ -15,7 +15,7 @@ embed_dim = 768
 
 embeddings = torch.randn(batch_size, seq_len, embed_dim)
 
-print("Embeddings", embeddings.shape)
+#print("Embeddings", embeddings.shape)
 
 #context_aware embeddings
 
@@ -23,11 +23,14 @@ d_model = 768
 
 d_k = 64
 
+#esta cosa slo transforma la ultima dimension
 W_q = nn.Linear(d_model,d_k,bias=False)
 W_k = nn.Linear(d_model,d_k,bias=False)
 W_v = nn.Linear(d_model,d_k,bias=False)
 
 #estos vectores van a apuntar a lugares diferentes y se van a alinear
+
+
 Q = W_q(embeddings)
 
 K = W_k(embeddings)
@@ -70,7 +73,7 @@ queries
 
 output = attn_weights @ V
 
-print(output.shape)
+#print(output.shape)
 
 def scaled_dot_product_attention(Q,K,V, mask=None):
     d_k = Q.size(-1)
@@ -82,7 +85,8 @@ def scaled_dot_product_attention(Q,K,V, mask=None):
     if mask is not None:
         a = a.masked_fill(mask == 0, float('-inf'))
         #print(a)
-        
+
+    #tiene que aprender a usar lo que tiene para predecir la siguiente palabra no mas!
     #los -inf no cuentan para calcular pesos
     #entonces toda la atencion va hacia el pasado
 
@@ -105,4 +109,72 @@ def create_causal_mask(seq_len):
 mask = create_causal_mask(6)
 output, attn_weights = scaled_dot_product_attention(Q,K,V,mask=mask)
 
-print(attn_weights)
+#print(attn_weights)
+
+
+#each head sees all tokens but learns different patterns
+
+class multiheadattention(nn.Module):
+    def __init__(self, d_model, num_heads, dropout=0.1):
+        super().__init__()
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_head = d_model // num_heads
+
+        #768 a 2304
+        self.qkv_proj = nn.Linear(d_model, 3*d_model,bias=False)
+        
+        self.out_proj = nn.Linear(d_model, d_model, bias=False)
+
+        self.dropout = nn.Dropout(p=dropout)
+    
+    def forward(self, x, mask=None):
+        
+        batch, seq, d_model = x.shape #768
+
+        qkv = self.qkv_proj(x)
+
+        qkv = qkv.reshape(batch, seq, 3, self.num_heads, self.d_head)
+
+        qkv = qkv.permute(2,0,3,1,4)
+
+        Q = qkv[0]
+        K = qkv[1]
+        V = qkv[2]
+
+        d_k = self.d_head
+
+        a = Q @ K.transpose(-2,-1)
+
+        a = a / math.sqrt(d_k)
+
+        if mask is not None:
+            if mask.dim() == 2:
+                mask = mask.unsqueeze(0).unsqueeze(0)
+
+            a = a.masked_fill(mask == 0, float('-inf'))
+
+        attn_weights = F.softmax(a, dim=-1)
+
+        attn_weights = self.dropout(attn_weights)
+
+        output = attn_weights @ V
+
+        output = output.transpose(1,2)
+
+        output = output.reshape(batch, seq, d_model)
+
+        o = self.out_proj(output)
+
+        return o, attn_weights
+
+a = multiheadattention(d_model=768, num_heads=12, dropout=0.1)
+
+embeddings_test = torch.randn(2,6,768)
+mask = create_causal_mask(6)
+
+o, a = a(embeddings_test, mask)
+
+print(embeddings_test.shape)
+print(o.shape)
