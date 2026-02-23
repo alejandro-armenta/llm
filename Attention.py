@@ -32,7 +32,13 @@ Q = W_q(embeddings)
 
 K = W_k(embeddings)
 
-token * token en sequencia
+
+#token * token en sequencia
+"""
+        keys
+queries 
+"""
+
 a = Q @ K.transpose(-2,-1)
 
 #noramlizando cada score
@@ -40,5 +46,43 @@ a = a / math.sqrt(d_k)
 
 attn_weights = F.softmax(a, dim=-1)
 
-each query
-print(attn_weights[0,0].sum())
+"""
+#2*6*6            2 * 6 * 64
+#6 * 64
+----probs-----   ----v-------
+|
+|
+6|              6
+|
+|
+
+"""
+
+V = W_v(embeddings)
+
+#aqui accedes al valor de los libros
+#si tienen que ser las queries porque 
+
+"""
+        values
+queries 
+"""
+
+output = attn_weights @ V
+
+print(output.shape)
+
+def scaled_dot_product_attention(Q,K,V, mask=None):
+    d_k = Q.size(-1)
+
+    a = Q @ K.transpose(-2,-1)
+
+    a = a / math.sqrt(d_k)
+
+    attn_weights = F.softmax(a, dim=-1)
+
+    output = attn_weights @ V
+
+    return output, attn_weights
+    
+output, attn_weights = scaled_dot_product_attention(Q,K,V)
