@@ -79,10 +79,30 @@ def scaled_dot_product_attention(Q,K,V, mask=None):
 
     a = a / math.sqrt(d_k)
 
+    if mask is not None:
+        a = a.masked_fill(mask == 0, float('-inf'))
+        #print(a)
+        
+    #los -inf no cuentan para calcular pesos
+    #entonces toda la atencion va hacia el pasado
+
     attn_weights = F.softmax(a, dim=-1)
+
+    #print(attn_weights[0].sum(dim=-1))
 
     output = attn_weights @ V
 
     return output, attn_weights
     
-output, attn_weights = scaled_dot_product_attention(Q,K,V)
+
+#esta mascara es importante porque si no no funciona
+def create_causal_mask(seq_len):
+
+    mask = torch.tril(torch.ones(seq_len, seq_len))
+
+    return mask
+
+mask = create_causal_mask(6)
+output, attn_weights = scaled_dot_product_attention(Q,K,V,mask=mask)
+
+print(attn_weights)
