@@ -2,53 +2,50 @@ from transformers import AutoTokenizer
 
 from functools import partial
 
-from torch.utils.data import Dataset, DataLoader
+import torch
 
+from torch.utils.data import random_split, DataLoader
+
+from utils import TextDataset, collate_fn
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(device)
+
+if torch.cuda.is_available():
+    print(torch.cuda.get_device_name(0))
+
+def set_seed(seed=42):
+    torch.manual_seed(seed=seed)
+    torch.cuda.manual_seed_all(seed=seed)
+
+set_seed(42)
 
 with open('shakespeare.txt', 'r') as f:
     text = f.read()
 
-class TextDataset(Dataset):
-    def __init__(self, text, chunk_size=128):
-        self.chunks = []
-        for i in range(0, len(text) - chunk_size, chunk_size):
-            self.chunks.append(text[i:i+chunk_size])
 
-    def __len__(self):
-        return len(self.chunks)
-
-    def __getitem__(self, index):
-        return self.chunks[index]
-
-
-dataset = TextDataset(text=text, chunk_size=256)
-#print(len(dataset))
-#print(dataset[1])
 
 tokenizer = AutoTokenizer.from_pretrained('gpt2')
+tokenizer.pad_token = tokenizer.eos_token
 
-#el bactch es un grupo de chunks
+dataset = TextDataset(text=text, chunk_size=256)
 
-def collate_fn(batch, tokenizer, max_length=128):
-    #batch * arbitrary
 
-    #batch * max_length
+train_size = int(0.9 * len(dataset))
+val_size = len(dataset) - train_size
 
-    encoded = tokenizer(
-        batch, 
-        padding=True, 
-        truncation=True, 
-        max_length=max_length, 
-        return_tensors='pt'
-        )
-    
-    return encoded['input_ids'], encoded['attention_mask']
+train_dataset, val_dataset = random_split(
+    dataset, 
+    [train_size, val_size], 
+    generator=torch.Generator().manual_seed(42)
+    )
 
-#es un objeto que le pasa esos argumentos dejando el primero libre
 collate = partial(collate_fn, tokenizer=tokenizer, max_length=128)
 
-print(collate)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate, num_workers=10)
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, collate_fn=collate)
 
+input_ids, attn = next(iter(train_loader))
 
-
-#DataLoader()
+print(input_ids.shape)
+print(attn.shape)
