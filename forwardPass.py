@@ -26,4 +26,7 @@ for prob, idx in zip(values, indices):
     token = tokenizer.decode([idx])
     print(f'{prob:.4f} {token}')
 
+print(torch.cuda.device_count())
+print(torch.cuda.get_device_name(0))
+
 

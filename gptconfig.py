@@ -128,4 +128,4 @@ def count_parameters(model):
     """Count total trainable parameters."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-#print(f"{count_parameters(a):,}")
+print(f"{count_parameters(a):,}")
