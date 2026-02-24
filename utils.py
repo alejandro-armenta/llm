@@ -14,10 +14,11 @@ class TextDataset(Dataset):
 
 
 def collate_fn(batch, tokenizer, max_length=128):
-    
+
     encoded = tokenizer(
         batch, 
         padding=True, 
+        #padding='max_length', 
         truncation=True, 
         max_length=max_length, 
         return_tensors='pt'
