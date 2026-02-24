@@ -178,6 +178,6 @@ mask = create_causal_mask(6)
 
 o, a = a(embeddings_test, mask)
 
-print(embeddings_test.shape)
-print(o.shape)
-print(a.shape)
+#print(embeddings_test.shape)
+#print(o.shape)
+#print(a.shape)

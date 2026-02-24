@@ -32,10 +32,10 @@ x_ln= torch.randn(2, 6, 768)
 
 output_ln = ln(x_ln)
 
-print("orig mean", x_ln.mean())
-print("output mean", output_ln.mean())
-print("orig std", x_ln.std())
-print("output std", output_ln.std())
+#print("orig mean", x_ln.mean())
+#print("output mean", output_ln.mean())
+#print("orig std", x_ln.std())
+#print("output std", output_ln.std())
 
 
 class TransformerBlock(nn.Module):
@@ -70,3 +70,6 @@ embeddings_block= torch.randn(2, 6, 768)
 mask_block = create_causal_mask(6)
 
 output_block, attn_weights_block = tb(embeddings_block, mask_block)
+
+
+
