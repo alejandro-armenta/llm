@@ -71,11 +71,11 @@ class GPT(nn.Module):
 
         tok_emb = self.token_embed(token_ids)
 
-        print(tok_emb.shape)
+        #print(tok_emb.shape)
 
         positions = torch.arange(seq, device=device)
         
-        print(positions.shape)
+        #print(positions.shape)
 
         #16 * 768
         pos_emb = self.pos_embed(positions)
@@ -83,18 +83,27 @@ class GPT(nn.Module):
         #tienen los mismos vectores se repiten por batch
         x = self.dropout(tok_emb + pos_emb)
         
+        #print(x.shape)
+
         mask = torch.tril(torch.ones(seq,seq, device=device))
         
         attention_weights = []
+        
         for b in self.blocks:
             x, attn = b(x, mask)
+            
+            #print(x.shape)
 
             if return_attention:
                 attention_weights.append(attn)
 
         x = self.ln_f(x)
 
+        #print(x.shape)
+
         logits = self.lm_head(x)
+
+        #print(logits.shape)
 
         if return_attention:
             return logits, attention_weights
@@ -107,6 +116,16 @@ a = GPT(config=config)
 batch_size = 2
 seq_len = 16
 token_ids = torch.randint(0,config.vocab_size, (batch_size, seq_len))
-print(token_ids)
-a(token_ids)
 
+#print(token_ids.shape)
+
+logits = a(token_ids)
+
+#print(logits.shape)
+
+
+def count_parameters(model):
+    """Count total trainable parameters."""
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+#print(f"{count_parameters(a):,}")
