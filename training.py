@@ -14,6 +14,7 @@ from utils import TextDataset, collate_fn, train_epoch
 
 from gptconfig import GPTConfig, GPT
 
+import matplotlib.pyplot as plt
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -126,11 +127,16 @@ def save_model():
 
 best_val_loss = float('inf')
 
+train_losses = []
+val_losses = []
+
 for e in range(num_epochs):
 
     train_loss = train_epoch(model=model, dataloader=train_loader, optimizer=optimizer, scheduler=scheduler, tokenizer=tokenizer, device=device, clip_norm=1.0)
+    train_losses.append(train_loss)
 
     val_loss = evaluate(model=model, dataloader=val_loader, device=device)
+    val_losses.append(val_loss)
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss
@@ -144,3 +150,20 @@ for e in range(num_epochs):
         }, f='best_model.pt')
 
 print(best_val_loss)
+
+
+
+plt.figure(figsize=(8,5))
+epochs = range(1, len(train_losses) + 1)
+plt.plot(epochs, train_losses, 'b-o', label='Train Loss')
+plt.plot(epochs, val_losses, 'r-o', label='Val Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.savefig('loss.png')
+#plt.show()
+
+
+
