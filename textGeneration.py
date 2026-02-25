@@ -12,10 +12,11 @@ chech = torch.load('best_model.pt', map_location=device)
 
 print(chech['val_loss'])
 
+"""
 config = GPTConfig()
 a = GPT(config=config)
-
 """
+
 config = GPTConfig(
     vocab_size=50257,
     max_seq_len=128,
@@ -27,7 +28,7 @@ config = GPTConfig(
 )
 
 model = GPT(config=config)
-"""
+
 
 model.to(device)
 

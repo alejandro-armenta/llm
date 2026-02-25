@@ -65,7 +65,7 @@ print(train_dataset)
 collate = partial(
     collate_fn, 
     tokenizer=tokenizer, 
-    max_length=1024)
+    max_length=128)
 
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate, num_workers=10)
 
@@ -77,11 +77,11 @@ val_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, collate_fn=
 item, _ = next(iter(val_loader))
 print(item.shape)
 
-
+"""
 config = GPTConfig()
 model = GPT(config=config)
-
 """
+
 config = GPTConfig(
     vocab_size=50257,
     max_seq_len=128,
@@ -93,7 +93,6 @@ config = GPTConfig(
 )
 
 model = GPT(config=config)
-"""
 
 model.to(device=device)
 
