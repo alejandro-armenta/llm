@@ -10,13 +10,18 @@ from torch.optim import AdamW
 
 from torch.utils.data import random_split, DataLoader
 
-from utils import TextDataset, collate_fn, train_epoch
+from utils import TextDataset, collate_fn, train_epoch, evaluate
 
 from gptconfig import GPTConfig, GPT
 
 import matplotlib.pyplot as plt
 
+import json
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+#device = torch.device('cpu')
+
 print(device)
 
 if torch.cuda.is_available():
@@ -28,32 +33,55 @@ def set_seed(seed=42):
 
 set_seed(42)
 
-with open('shakespeare.txt', 'r') as f:
-    text = f.read()
+
+def read_jsonl_file(file_path):
+    data = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    # Parse each line as a JSON object
+                    json_object = json.loads(line)
+                    data.append(json_object)
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing line: {e}")
+    return data
+
+file_path_train_data = 'data/small-117M.train.jsonl'
+file_path_valid_data = 'data/small-117M.valid.jsonl'
+
+train_data = read_jsonl_file(file_path_train_data)
+valid_data = read_jsonl_file(file_path_valid_data)
 
 tokenizer = AutoTokenizer.from_pretrained('gpt2')
 tokenizer.pad_token = tokenizer.eos_token
 
-dataset = TextDataset(text=text, chunk_size=256)
+train_dataset = TextDataset(data=train_data)
+valid_dataset = TextDataset(data=valid_data)
 
-
-train_size = int(0.9 * len(dataset))
-val_size = len(dataset) - train_size
-
-train_dataset, val_dataset = random_split(
-    dataset, 
-    [train_size, val_size], 
-    generator=torch.Generator().manual_seed(42)
-    )
+print(train_dataset)
 
 collate = partial(
     collate_fn, 
     tokenizer=tokenizer, 
-    max_length=128)
+    max_length=1024)
 
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate, num_workers=10)
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, collate_fn=collate)
 
+item, _ = next(iter(train_loader))
+print(item.shape)
+
+val_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, collate_fn=collate)
+
+item, _ = next(iter(val_loader))
+print(item.shape)
+
+
+config = GPTConfig()
+model = GPT(config=config)
+
+"""
 config = GPTConfig(
     vocab_size=50257,
     max_seq_len=128,
@@ -65,6 +93,7 @@ config = GPTConfig(
 )
 
 model = GPT(config=config)
+"""
 
 model.to(device=device)
 
@@ -83,48 +112,6 @@ optimizer = AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01)
 scheduler = get_linear_schedule_with_warmup(optimizer=optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=total_steps)
 
 
-def evaluate(model, dataloader, device):
-    model.eval()
-
-    total_loss = 0
-    total_tokens = 0
-
-    for input_ids, attn_mask in dataloader:
-        input_ids = input_ids.to(device)
-
-        inputs = input_ids[:,:-1]
-
-        targets = input_ids[:,1:]
-
-        logits = model(inputs)
-
-        a = logits.view(-1, logits.size(-1))
-        
-        b = targets.reshape(-1)
-
-        loss = F.cross_entropy(
-            a, 
-            b, 
-            ignore_index=tokenizer.pad_token_id,
-            reduction='sum'
-            )
-        
-        mask = (targets != tokenizer.pad_token_id)
-
-        total_loss += loss.item()
-        total_tokens += mask.sum().item()
-
-    #print(total_loss)
-    #print(total_tokens)
-    
-    mean_loss_per_token = total_loss/total_tokens
-
-    return mean_loss_per_token
-
-
-def save_model():
-    pass
-
 best_val_loss = float('inf')
 
 train_losses = []
@@ -135,7 +122,7 @@ for e in range(num_epochs):
     train_loss = train_epoch(model=model, dataloader=train_loader, optimizer=optimizer, scheduler=scheduler, tokenizer=tokenizer, device=device, clip_norm=1.0)
     train_losses.append(train_loss)
 
-    val_loss = evaluate(model=model, dataloader=val_loader, device=device)
+    val_loss = evaluate(model=model, dataloader=val_loader, tokenizer=tokenizer, device=device)
     val_losses.append(val_loss)
 
     if val_loss < best_val_loss:
@@ -164,6 +151,5 @@ plt.legend()
 plt.grid(True, alpha=0.3)
 plt.savefig('loss.png')
 #plt.show()
-
 
 

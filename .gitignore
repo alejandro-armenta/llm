@@ -3,3 +3,4 @@ FirstLLM.pdf
 /__pycache__
 llm.code-workspace
 best_model.pt
+/data

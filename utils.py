@@ -7,10 +7,12 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 class TextDataset(Dataset):
-    def __init__(self, text, chunk_size=128):
+    def __init__(self, data):
+
         self.chunks = []
-        for i in range(0, len(text) - chunk_size, chunk_size):
-            self.chunks.append(text[i:i+chunk_size])
+        
+        for line in data:
+            self.chunks.append(line['text'])
 
     def __len__(self):
         return len(self.chunks)
@@ -72,3 +74,39 @@ def train_epoch(model, dataloader, optimizer, scheduler, tokenizer, device, clip
         epoch_loss += loss.item()
 
     return epoch_loss / len(dataloader)
+
+
+def evaluate(model, dataloader, tokenizer, device):
+    model.eval()
+
+    total_loss = 0
+    total_tokens = 0
+
+    for input_ids, attn_mask in dataloader:
+        input_ids = input_ids.to(device)
+
+        inputs = input_ids[:,:-1]
+
+        targets = input_ids[:,1:]
+
+        logits = model(inputs)
+
+        a = logits.view(-1, logits.size(-1))
+        
+        b = targets.reshape(-1)
+
+        loss = F.cross_entropy(
+            a, 
+            b, 
+            ignore_index=tokenizer.pad_token_id,
+            reduction='sum'
+            )
+        
+        mask = (targets != tokenizer.pad_token_id)
+
+        total_loss += loss.item()
+        total_tokens += mask.sum().item()
+
+    mean_loss_per_token = total_loss/total_tokens
+
+    return mean_loss_per_token
