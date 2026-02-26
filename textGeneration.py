@@ -66,7 +66,7 @@ def generate_(model, tokenizer, prompt, max_new_tokens=30):
 
 
 @torch.no_grad()
-def generate(model, tokenizer, prompt, max_new_tokens=30, temperature=1.0):
+def generate(model, tokenizer, prompt, max_new_tokens=512, temperature=1.0):
     """Generate text with temperature control."""
     model.eval()
     device = next(model.parameters()).device
